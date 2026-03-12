@@ -1,0 +1,61 @@
+Software Used
+MATLAB R2025a with Audio toolbox, Deep Learning.
+
+
+Hardware parts used
+• Esp32 wroom32
+• Arduino
+• Arduino motor driver L293D
+• Lipo batterys
+
+
+Algorithm
+
+1. Start the System
+• Power on the robot car and connect the ESP32 to Wi-Fi.
+• Upload Arduino code to ESP32 for communication between MATLAB and
+motor driver.
+
+2. Initialize MATLAB
+• Open MATLAB and run the v.m script.
+• Start audio input (microphone) using Audio Toolbox.
+
+3. Voice Command Acquisition
+• MATLAB continuously listens for the user’s voice command.
+• Speech is recorded using audiorecorder function.
+
+4. Speech-to-Text Conversion
+• The captured audio is processed and converted into text.
+• Predefined keywords like "forward", "backward", "left", "right", "stop"
+are recognized.
+
+5. Command Verification
+• Compare recognized text with predefined commands.
+• If the word matches a valid command → proceed.
+• If invalid command → prompt user to repeat.
+
+6. Send Command to ESP32
+• MATLAB sends the recognized command over Wi-Fi (TCP/IP Socket) to
+ESP32.
+• ESP32 receives command string from MATLAB.
+
+7. ESP32 → Arduino Motor Driver
+• ESP32 forwards the command to the Arduino motor shield (AFMotor
+library).
+• Depending on the command:
+forward → both motors rotate forward
+backward → both motors rotate backward
+left → left motor stop, right motor forward
+right → right motor stop, left motor forward
+stop → both motors stop
+
+8. Robot Movement
+Car performs the required motion according to the command.
+
+9. Feedback to MATLAB
+• ESP32 sends status back to MATLAB (e.g., “Executing forward”).
+• MATLAB displays the execution result in the Command Window.
+
+10. Loop Until Exit
+• System keeps listening for the next voice command.
+• Exit when user presses Ctrl+C or gives a stop/quit command.
