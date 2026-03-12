@@ -1,0 +1,83 @@
+% MATLAB CODE
+
+% --- Final MATLAB script for voice-controlled ESP32 robot ---
+% Configuration
+% *** UPDATE THIS LINE WITH YOUR ESP32'S ACTUAL IP ADDRESS ***
+
+esp32_ip = '10.xx.xxxx';% give ur esp32 ip address
+esp32_port = 3xx3;% create an port number for ur car
+
+% Create a TCP/IP client object to connect to the ESP32
+try
+ client = tcpclient(esp32_ip, esp32_port, "ConnectTimeout", 5);
+ fprintf('Connected to ESP32 at %s:%d\n', esp32_ip, esp32_port);
+catch ME
+ error('Could not connect to ESP32. Check IP address, port, and network
+connection. Error: %s', ME.message);
+end
+% Create a speech client for transcription using the local wav2vec2.0 model
+% Requires Audio Toolbox and Deep Learning Toolbox.
+try
+ speechClientObj = speechClient("wav2vec2.0");
+catch ME
+ error('Could not create speech client. Ensure Audio Toolbox is installed and
+the wav2vec2.0 model is downloaded. Run speechClient("wav2vec2.0") in the command
+window.');
+end
+% Set up the audio recorder
+duration = 2; % Recording duration in seconds
+fs = 16000; % Recommended sampling rate for the wav2vec2.0 model
+recorder = audiorecorder(fs, 16, 1);
+fprintf('Microphone is ready. Say a command when prompted.\n');
+% Define the voice commands and corresponding characters to send
+command_map = containers.Map({'forward', 'backward', 'left', 'right', 'stop'},
+{'F', 'B', 'L', 'R', 'S'});
+confidence_threshold = 0.6; % Only accept commands with this or higher confidence
+while true
+ try
+ fprintf('Listening for command... (Press Ctrl+C to stop)\n');
+
+ % Record user's voice
+ recordblocking(recorder, duration);
+ audio_data = getaudiodata(recorder);
+ % Transcribe audio to text using the speech model
+ result_table = speech2text(audio_data, fs, 'Client', speechClientObj);
+
+ % Check if a transcript and confidence level were returned
+ if ~isempty(result_table) && ~isempty(result_table.Transcript)
+ recognized_command = lower(strtrim(string(result_table.Transcript)));
+ confidence = result_table.Confidence;
+
+ if confidence >= confidence_threshold
+ % Search for a matching command
+ if isKey(command_map, recognized_command)
+ command_char = command_map(recognized_command);
+% Send the command to ESP32
+fprintf('Recognized: "%s" (Confidence: %.2f). Sending command:
+%s\n', recognized_command, confidence, command_char);
+ write(client, [command_char, newline]); % Add newline as ESP32
+expects it
+ else
+ fprintf('Unknown command: "%s" (Confidence: %.2f). Please try
+again.\n', recognized_command, confidence);
+ end
+ else
+ fprintf('Low confidence (%.2f) for transcript "%s". Please try
+again.\n', confidence, recognized_command);
+ end
+ else
+ fprintf('No speech detected or transcription failed. Please try
+again.\n');
+ end
+
+ catch ME
+ fprintf('An error occurred: %s\n', ME.message);
+ break; % Exit loop on error
+ end
+
+ pause(1); % Wait a moment before listening again
+end
+% Clean up resources
+clear client;
+clear recorder;
+fprintf('Connection closed.\n');
