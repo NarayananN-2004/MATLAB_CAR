@@ -1,0 +1,57 @@
+//ESP32 CODE FOR TRANSMISSION 
+
+#include <WiFi.h>
+
+// Your Wi-Fi credentials
+const char* ssid = "XXXXXXXX"; //GIVE UR HOTSPOT DEVICE NAME 
+const char* password = "1ABCXXX"; // GIVE UR HOTSPOT PASSWORD
+
+// TCP Server setup
+WiFiServer server(3XX3); // GIVE THE PORT NUMBER FROM MATLAB CODE
+
+// UART to Arduino (use GPIO16 & GPIO17)
+#define RXD2 16
+#define TXD2 17
+HardwareSerial MySerial(1);
+
+void setup() {
+ Serial.begin(115200); // For debugging
+ MySerial.begin(9600, SERIAL_8N1, RXD2, TXD2); // UART for Arduino
+
+ // Connect to Wi-Fi
+ Serial.print("Connecting to Wi-Fi");
+ WiFi.begin(ssid, password);
+ while (WiFi.status() != WL_CONNECTED) {
+ delay(500);
+ Serial.print(".");
+ }
+ Serial.println("\nConnected to Wi-Fi!");
+
+ // ✅ Print IP address correctly here
+ Serial.print("ESP32 IP Address: ");
+ Serial.println(WiFi.localIP());
+ // Start TCP server
+ server.begin();
+ Serial.println("TCP server started on port 3333");
+}
+void loop() {
+ WiFiClient client = server.available();
+ if (client) {
+ Serial.println("MATLAB connected to ESP32...");
+ while (client.connected()) {
+ if (client.available()) {
+ String command = client.readStringUntil('\n');
+ command.trim();
+ Serial.println("Command from MATLAB: " + command);
+ if (command.length() > 0) {
+ char c = command.charAt(0);
+ MySerial.write(c);
+ Serial.print("Forwarded to Arduino: ");
+ Serial.println(c);
+ }
+ }
+ }
+ client.stop();
+ Serial.println("MATLAB disconnected.");
+ }
+}
